@@ -12,6 +12,8 @@ import {
 import { SearchPanel } from '../components/search/SearchPanel.js'
 import { closeSearchPanel } from '../components/search/searchPanelState.js'
 import { ReportPanel } from '../components/reports/ReportPanel.js'
+import { ResearchPanel } from '../components/research/ResearchPanel.js'
+import { closeResearchPanel } from '../components/research/researchPanelState.js'
 import { bindReportPersistence, initReports } from '../services/reports/store.js'
 import { SessionView } from '../components/session/SessionView.js'
 import { MobileHeader } from '../components/session/MobileHeader.js'
@@ -63,8 +65,9 @@ export const App = () => {
   useEffect(bindChatPersistence, [])
   useEffect(bindReportPersistence, [])
 
-  // 搜索结果面板只属于当前会话
+  // 搜索与研究来源面板只属于当前会话
   useEffect(closeSearchPanel, [activeId])
+  useEffect(closeResearchPanel, [activeId])
   // 切换会话时停止朗读
   useEffect(stopReadAloud, [activeId])
   // 移动端选中会话、切换布局后收起抽屉
@@ -135,6 +138,7 @@ export const App = () => {
           </div>
         </main>
         <SearchPanel />
+        <ResearchPanel />
         <ReportPanel />
       </div>
       <SettingsDialog />

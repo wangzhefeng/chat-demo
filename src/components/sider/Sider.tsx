@@ -18,6 +18,7 @@ import { Modal } from '../base/Modal.js'
 import { showToast } from '../base/toastState.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { closeSearchPanel } from '../search/searchPanelState.js'
+import { closeResearchPanel } from '../research/researchPanelState.js'
 import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
 import styles from './Sider.module.css'
@@ -104,6 +105,7 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
           className={styles.settings}
           onClick={() => {
             closeSearchPanel()
+            closeResearchPanel()
             openReports()
             closeMobileSider()
           }}

@@ -20,7 +20,7 @@ export const createReportSnapshot = (
     id: createId(),
     sourceKey: reportSourceKey(session.id, message.id),
     title: session.title || translate('untitledReport'),
-    content: view.answer.text,
+    content: view.answer.portableMarkdown,
     source: {
       sessionId: session.id,
       messageId: message.id,
@@ -39,6 +39,24 @@ const linkText = (value: string) =>
   value.replaceAll('\\', '\\\\').replaceAll('[', '\\[').replaceAll(']', '\\]')
 const isoTime = (value: number) => new Date(value).toISOString()
 
+const sourceEvidence = (source: Report['sources'][number]): string[] => [
+  ...(source.foundInSearch ? [translate('sourceFoundInSearch')] : []),
+  ...(source.readStatus
+    ? [
+        translate(
+          source.readStatus === 'read'
+            ? 'sourceRead'
+            : source.readStatus === 'failed'
+              ? 'sourceReadFailed'
+              : source.readStatus === 'reading'
+                ? 'sourceReading'
+                : 'sourceReadUnconfirmed'
+        ),
+      ]
+    : []),
+  ...(source.cited ? [translate('sourceCited')] : []),
+]
+
 export const reportToMarkdown = (report: Report): string => {
   const title = singleLine(report.title) || translate('untitledReport')
   const sessionTitle = singleLine(report.source.sessionTitle) || translate('untitledChat')
@@ -47,6 +65,7 @@ export const reportToMarkdown = (report: Report): string => {
     [
       `> ${translate('reportSourceSession')}: ${sessionTitle}`,
       `> ${translate('reportSourceAnswerTime')}: ${isoTime(report.source.messageCreatedAt)}`,
+      `> ${translate('reportResearchTime')}: ${isoTime(report.createdAt)}`,
       `> ${translate('reportUpdatedAt')}: ${isoTime(report.updatedAt)}`,
     ].join('\n'),
     report.content,
@@ -55,10 +74,11 @@ export const reportToMarkdown = (report: Report): string => {
     sections.push(
       [
         `## ${translate('reportOriginalSources')}`,
-        ...report.sources.map(
-          (source, index) =>
-            `${index + 1}. [${linkText(source.title)}](<${source.url.replace(/[<>]/g, (char) => (char === '<' ? '%3C' : '%3E'))}>)`
-        ),
+        ...report.sources.map((source, index) => {
+          const evidence = sourceEvidence(source)
+          const suffix = evidence.length > 0 ? ` (${evidence.join('; ')})` : ''
+          return `${index + 1}. [${linkText(source.title)}](<${source.url.replace(/[<>]/g, (char) => (char === '<' ? '%3C' : '%3E'))}>)${suffix}`
+        }),
       ].join('\n\n')
     )
   }

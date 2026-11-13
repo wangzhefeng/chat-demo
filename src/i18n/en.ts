@@ -202,9 +202,57 @@ export const en = {
   reportExport: 'Export Markdown',
   reportSourceSession: 'Source chat',
   reportSourceAnswerTime: 'Answer time',
+  reportResearchTime: 'Research compiled',
   reportUpdatedAt: 'Report updated',
   reportOriginalSources: 'Sources from the original answer',
   reportLoadFailed: 'Failed to load reports. Please try again.',
   reportLoading: 'Loading reports...',
   reportEmptyPreview: 'No content yet',
+  researchWorkbench: 'Research workspace',
+  researchTemplate: 'Research template',
+  researchTemplateGeneral: 'General research',
+  researchTemplateTechnology: 'Technology selection',
+  researchTemplateProduct: 'Product comparison',
+  researchTemplateFactCheck: 'Fact checking',
+  researchTemplateGeneralInstruction:
+    'Collect and compare relevant material, making clear what is known and unknown.',
+  researchTemplateTechnologyInstruction:
+    'Define requirements and constraints; compare candidate technologies by use case, cost, risk, and ecosystem.',
+  researchTemplateProductInstruction:
+    'Compare capabilities, pricing, limitations, and target users using consistent dimensions; avoid unsupported recommendations.',
+  researchTemplateFactCheckInstruction:
+    'Separate claims to verify, compare supporting and opposing evidence, and distinguish facts, opinions, and unconfirmed information.',
+  researchQuestion: 'Research question',
+  researchQuestionPlaceholder: 'Enter the core question to research',
+  researchScope: 'Scope (optional)',
+  researchScopePlaceholder:
+    'For example: time period, region, candidates, evaluation criteria, or exclusions',
+  researchLinks: 'Specified sources (optional, one per line)',
+  researchLinksPlaceholder: 'https://example.com/first\nhttps://example.com/second',
+  researchApply: 'Add to chat input',
+  researchApplyNote:
+    'This only creates an editable research prompt and enables search. It does not send anything or call the API.',
+  researchQuestionRequired: 'Enter a research question',
+  researchInvalidLinks: 'These are not valid HTTP/HTTPS URLs',
+  researchPromptTemplate: 'Research template',
+  researchPromptQuestion: 'Research question',
+  researchPromptScope: 'Scope',
+  researchPromptLinks: 'Specified sources to read and verify',
+  researchPromptRequirements: 'Research requirements',
+  researchPromptEvidence:
+    'Distinguish search results from successfully read pages. State read failures or insufficient evidence explicitly, and never invent sources.',
+  researchPromptOutput:
+    'Include conclusions, comparisons or checks, evidence, contradictions, and items requiring verification, with citations for key conclusions.',
+  researchSources: 'Sources and evidence',
+  researchNoSources: 'This answer has no source links to display',
+  researchNoCitations:
+    'The answer contains no source citations; the available material does not substantiate its conclusions',
+  researchSearchFailed: 'A search failed, so search results may be incomplete',
+  researchSearchEmpty: 'A search returned no results',
+  sourceFoundInSearch: 'Found in search',
+  sourceCited: 'Cited in answer',
+  sourceReadUnconfirmed: 'Reading not confirmed',
+  sourceReading: 'Reading',
+  sourceRead: 'Read successfully',
+  sourceReadFailed: 'Read failed',
 } satisfies Record<keyof typeof zh, string>

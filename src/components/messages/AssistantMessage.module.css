@@ -108,6 +108,17 @@
   margin-left: auto;
 }
 
+.research {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sourceButton {
+  margin-top: 16px;
+}
+
 .summary {
   display: flex;
   align-items: center;

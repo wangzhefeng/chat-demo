@@ -4,6 +4,7 @@ import { setSiderCollapsed } from '../../services/settings.js'
 import { newChat } from '../../services/chat/store.js'
 import { openReports } from '../../services/reports/store.js'
 import { closeSearchPanel } from '../search/searchPanelState.js'
+import { closeResearchPanel } from '../research/researchPanelState.js'
 import { IconButton } from '../base/IconButton.js'
 import styles from './Sider.module.css'
 
@@ -34,6 +35,7 @@ export const CollapsedSider = () => {
           tooltip={t('reports')}
           onClick={() => {
             closeSearchPanel()
+            closeResearchPanel()
             openReports()
           }}
         />

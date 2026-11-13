@@ -30,7 +30,9 @@ The output is written to `dist/`. Deploy it to a static web server or open `dist
 ## Features
 
 - Multiple conversations with automatic titles, renaming, and deletion; edit prompts, regenerate replies, and switch between message branches.
-- Turn answers into independently stored reports; edit and preview Markdown, save locally, and export reports with source links and timestamps.
+- Build editable research prompts from general research, technology selection, product comparison, and fact-checking templates, with scope and multiple source URLs.
+- Inspect sources and evidence separately from chat: distinguish search hits, confirmed reads, read failures, and citations without inferring unsupported read states.
+- Turn answers into independently stored reports; edit and preview Markdown, save locally, and export reports with inline source links, evidence states, and research timestamps.
 - Streaming replies, deep thinking, smart search, link reading, and source citations; stop generation or continue eligible replies.
 - Upload, paste, or drag and drop attachments; use voice input and read replies aloud. A live audio spectrum appears in the first row of the input area while recording on mobile.
 - Markdown, syntax highlighting, KaTeX math, and Mermaid diagrams.
@@ -69,6 +71,7 @@ src/
     chat/              Conversations, message branches, storage, and history import/export
     markdown/          Markdown parsing, syntax highlighting, and diagrams
     reports/           Independent report storage, editing state, and export
+    research.ts        Research templates, prompt construction, and URL validation
     speech/            Audio recording and read-aloud playback
   utils/               Shared utilities
 ```

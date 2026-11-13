@@ -8,7 +8,9 @@ describe('report snapshots', () => {
     const report = createReportSnapshot(makeSession(), reply, Date.UTC(2026, 0, 3))
 
     expect(report).not.toBeNull()
-    expect(report?.content).toBe('## 结论\n\n保留 **Markdown** 内容。')
+    expect(report?.content).toBe(
+      '## 结论\n\n保留 **Markdown** 内容。[1](<https://example.com/evidence>)'
+    )
     expect(report?.content).not.toContain('internal reasoning')
     expect(report?.source).toEqual({
       sessionId: 'session-1',

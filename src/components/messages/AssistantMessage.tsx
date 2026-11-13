@@ -17,6 +17,7 @@ import { Button } from '../base/Button.js'
 import { Markdown } from '../markdown/Markdown.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
 import { closeSearchPanel, toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
+import { closeResearchPanel, toggleResearchPanel } from '../research/researchPanelState.js'
 import { ReadAloudButton } from './ReadAloudButton.js'
 import { CopyButton } from './CopyButton.js'
 import { ReplyArea } from './ReplyArea.js'
@@ -128,18 +129,39 @@ export const AssistantMessage = memo(function AssistantMessage({
           </span>
         </div>
       ) : null}
-      {!streaming && !refused && view.searchResults.length > 0 ? (
-        <div
-          className={clsx(styles.summary, panelEntry === summaryEntry && styles.summaryActive)}
-          onClick={() => toggleSearchPanel(summaryEntry, view.searchResults)}
-        >
-          <SiteThumbnails sources={view.searchResults} />
-          <span>
-            {t(
-              view.searchResults.length === 1 ? 'messageSearchSummary' : 'messageSearchSummaries',
-              { count: view.searchResults.length }
-            )}
-          </span>
+      {!streaming &&
+      !refused &&
+      (view.searchResults.length > 0 ||
+        view.sources.length > 0 ||
+        view.researchIssues.length > 0) ? (
+        <div className={styles.research}>
+          {view.searchResults.length > 0 ? (
+            <div
+              className={clsx(styles.summary, panelEntry === summaryEntry && styles.summaryActive)}
+              onClick={() => toggleSearchPanel(summaryEntry, view.searchResults)}
+            >
+              <SiteThumbnails sources={view.searchResults} />
+              <span>
+                {t(
+                  view.searchResults.length === 1
+                    ? 'messageSearchSummary'
+                    : 'messageSearchSummaries',
+                  { count: view.searchResults.length }
+                )}
+              </span>
+            </div>
+          ) : null}
+          <Button
+            variant="outlined"
+            size="s"
+            className={styles.sourceButton}
+            onClick={() => {
+              closeSearchPanel()
+              toggleResearchPanel(`${message.id}-research`, view.sources, view.researchIssues)
+            }}
+          >
+            {t('researchSources')}
+          </Button>
         </div>
       ) : null}
       {streaming ? null : (
@@ -155,6 +177,7 @@ export const AssistantMessage = memo(function AssistantMessage({
                 disabled={busy}
                 onClick={() => {
                   closeSearchPanel()
+                  closeResearchPanel()
                   void createOrOpenReport(session, message)
                 }}
               />

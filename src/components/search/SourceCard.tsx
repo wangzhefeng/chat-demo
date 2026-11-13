@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import type { Source } from '../../services/chat/view.js'
 import { formatDate } from '../../utils/format.js'
 import { SiteLogo } from './SiteLogo.js'
+import { useTranslate } from '../../i18n/index.js'
 import styles from './SourceCard.module.css'
 
 /** 显示为 YYYY/MM/DD；无法解析的日期原样显示 */
@@ -11,7 +12,16 @@ const formatPublishedAt = (value: string | null) => (value ? (formatDate(value, 
  * 搜索结果卡片：站点图标与名称、日期、标题、摘要。
  * 元数据缺失时省略摘要，图标使用链接图标兜底。
  */
-export const SourceCard = ({ source, className }: { source: Source; className?: string }) => {
+export const SourceCard = ({
+  source,
+  className,
+  showEvidence = false,
+}: {
+  source: Source
+  className?: string
+  showEvidence?: boolean
+}) => {
+  const t = useTranslate()
   const date = formatPublishedAt(source.publishedAt)
   return (
     <a className={styles.anchor} href={source.url} target="_blank" rel="noreferrer">
@@ -24,6 +34,23 @@ export const SourceCard = ({ source, className }: { source: Source; className?: 
         </div>
         <div className={styles.title}>{source.title}</div>
         {source.snippet ? <div className={styles.snippet}>{source.snippet}</div> : null}
+        {showEvidence ? (
+          <div className={styles.evidence}>
+            {source.foundInSearch ? <span>{t('sourceFoundInSearch')}</span> : null}
+            <span className={source.readStatus === 'failed' ? styles.failed : undefined}>
+              {t(
+                source.readStatus === 'read'
+                  ? 'sourceRead'
+                  : source.readStatus === 'failed'
+                    ? 'sourceReadFailed'
+                    : source.readStatus === 'reading'
+                      ? 'sourceReading'
+                      : 'sourceReadUnconfirmed'
+              )}
+            </span>
+            {source.cited ? <span>{t('sourceCited')}</span> : null}
+          </div>
+        ) : null}
       </div>
     </a>
   )

@@ -1,8 +1,9 @@
 import clsx from 'clsx'
-import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   IconGlobeLanguageOutline14,
   IconPaperclipOutline16,
+  IconSearchOutline16,
   IconSendOutline16,
   IconStopFill16,
   IconThinkOutline14,
@@ -31,6 +32,7 @@ import { DraftAttachments } from './DraftAttachments.js'
 import { useVoiceInput } from './useVoiceInput.js'
 import { VoiceButton } from './VoiceButton.js'
 import { Spectrum } from './Spectrum.js'
+import { ResearchDialog } from '../research/ResearchDialog.js'
 import { useTranslate } from '../../i18n/index.js'
 import styles from './ChatInput.module.css'
 
@@ -55,6 +57,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const search = useSettings((state) => state.search)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [researchOpen, setResearchOpen] = useState(false)
   const togglesRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -202,6 +205,18 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       <div className={styles.functionRow}>
         {/* 深度思考 / 智能搜索开关，tooltip 在按钮上方 */}
         <div ref={togglesRef} className={styles.toggles}>
+          <Tooltip content={t('researchApplyNote')}>
+            <button
+              type="button"
+              className={styles.toggle}
+              aria-label={t('researchWorkbench')}
+              disabled={importingHistory || streaming}
+              onClick={() => setResearchOpen(true)}
+            >
+              <IconSearchOutline16 />
+              <span className={styles.toggleLabel}>{t('researchWorkbench')}</span>
+            </button>
+          </Tooltip>
           <Tooltip content={t('deactivatedThinkTooltip')}>
             <button
               type="button"
@@ -285,6 +300,18 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           )}
         </div>
       </div>
+      {researchOpen ? (
+        <ResearchDialog
+          initialQuestion={text}
+          onClose={() => setResearchOpen(false)}
+          onApply={(prompt) => {
+            setText(prompt)
+            setSearch(true)
+            setResearchOpen(false)
+            requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }))
+          }}
+        />
+      ) : null}
       {dragging ? <DragMask /> : null}
     </div>
   )
