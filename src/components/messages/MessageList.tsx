@@ -162,7 +162,7 @@ export const MessageList = ({
               ) : (
                 <AssistantMessage
                   key={message.id}
-                  sessionId={session.id}
+                  session={session}
                   message={message}
                   isLast={index === lastIndex}
                   streaming={streaming && index === lastIndex}
