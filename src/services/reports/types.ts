@@ -20,3 +20,15 @@ export type Report = {
 }
 
 export type ReportSaveStatus = 'saved' | 'dirty' | 'saving' | 'error' | 'conflict'
+
+export type ReportVersionReason = 'ai-edit' | 'restore'
+
+export type ReportVersion = {
+  id: string
+  reportId: string
+  title: string
+  content: string
+  revision: number
+  reason: ReportVersionReason
+  createdAt: number
+}

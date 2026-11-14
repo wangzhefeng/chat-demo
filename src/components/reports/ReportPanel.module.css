@@ -178,6 +178,44 @@
   padding-top: 4px;
 }
 
+.aiForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aiLabel {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.selectionPreview {
+  max-height: 160px;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  font: 12px/20px var(--dsw-font-family);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.instructionInput {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  resize: vertical;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-base);
+  font: 14px/21px var(--dsw-font-family);
+}
+
 .empty {
   display: flex;
   align-items: center;

@@ -33,6 +33,7 @@ The output is written to `dist/`. Deploy it to a static web server or open `dist
 - Build editable research prompts from general research, technology selection, product comparison, and fact-checking templates, with scope and multiple source URLs.
 - Inspect sources and evidence separately from chat: distinguish search hits, confirmed reads, read failures, and citations without inferring unsupported read states.
 - Turn answers into independently stored reports; edit and preview Markdown, save locally, and export reports with inline source links, evidence states, and research timestamps.
+- Request AI edits for selected report text, review line differences, accept or reject suggestions, and restore saved snapshots. Stale, cancelled, failed, refused, or incomplete results never overwrite the report.
 - Streaming replies, deep thinking, smart search, link reading, and source citations; stop generation or continue eligible replies.
 - Upload, paste, or drag and drop attachments; use voice input and read replies aloud. A live audio spectrum appears in the first row of the input area while recording on mobile.
 - Markdown, syntax highlighting, KaTeX math, and Mermaid diagrams.
@@ -40,7 +41,7 @@ The output is written to `dist/`. Deploy it to a static web server or open `dist
 
 ## Data and storage
 
-Your API key and settings are stored in the browser's localStorage. Conversations and original attachments are stored in IndexedDB; reports use a separate `chat-demo-reports` IndexedDB database. Local data is isolated by browser profile and site origin. Sending messages, uploading attachments, and using speech features sends the relevant content to the configured API service.
+Your API key and settings are stored in the browser's localStorage. Conversations and original attachments are stored in IndexedDB; reports and their historical snapshots use a separate `chat-demo-reports` IndexedDB database. Local data is isolated by browser profile and site origin. Sending messages, uploading attachments, using speech features, or requesting AI report edits sends the relevant content to the configured API service; AI edits include only the selected text, report title, and edit instruction.
 
 History import and export in Settings use ZIP archives. After confirmation and successful validation, importing replaces all local conversations and attachments. Exports include conversations and locally available original images, but exclude API keys, settings, reports, and original non-image attachments. Reports are exported separately as Markdown. See the [history import/export documentation (Chinese)](src/services/chat/history/README.md) for the archive format and preservation details.
 

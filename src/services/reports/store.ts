@@ -1,8 +1,9 @@
 import { create } from 'zustand'
+import { createId } from '../../utils/id.js'
 import type { AssistantMessage, Session } from '../chat/types.js'
 import * as db from './db.js'
 import { createReportSnapshot, reportSourceKey } from './report.js'
-import type { Report, ReportSaveStatus } from './types.js'
+import type { Report, ReportSaveStatus, ReportVersion, ReportVersionReason } from './types.js'
 
 type ReportState = {
   ready: boolean
@@ -13,6 +14,7 @@ type ReportState = {
   draft: Report | null
   saveStatus: ReportSaveStatus
   pending: boolean
+  versions: ReportVersion[]
 }
 
 export const useReportStore = create<ReportState>(() => ({
@@ -24,6 +26,7 @@ export const useReportStore = create<ReportState>(() => ({
   draft: null,
   saveStatus: 'saved',
   pending: false,
+  versions: [],
 }))
 
 const { getState: get, setState: set } = useReportStore
@@ -31,6 +34,7 @@ let initTask: Promise<void> | undefined
 let openSequence = 0
 let autosaveTimer: ReturnType<typeof setTimeout> | undefined
 let saveQueue: Promise<unknown> = Promise.resolve()
+let versionSequence = 0
 
 const sortReports = (reports: Report[]) => [...reports].sort((a, b) => b.updatedAt - a.updatedAt)
 
@@ -39,6 +43,20 @@ const replaceReport = (report: Report) =>
     reports: sortReports([...state.reports.filter((item) => item.id !== report.id), report]),
   }))
 
+const refreshVersions = async (reportId: string) => {
+  const sequence = ++versionSequence
+  try {
+    const versions = await db.loadReportVersions(reportId)
+    if (sequence === versionSequence && get().activeId === reportId) {
+      set({ versions })
+    }
+  } catch {
+    if (sequence === versionSequence) {
+      set({ loadError: true })
+    }
+  }
+}
+
 const activate = (report: Report) => {
   set({
     activeId: report.id,
@@ -46,7 +64,9 @@ const activate = (report: Report) => {
     saveStatus: 'saved',
     pending: false,
     loadError: false,
+    versions: [],
   })
+  void refreshVersions(report.id)
 }
 
 export const initReports = (force = false): Promise<void> => {
@@ -75,7 +95,7 @@ export const openReports = () => {
   void initReports(true)
 }
 
-export const saveActiveReport = (): Promise<boolean> => {
+export const saveActiveReport = (versionReason?: ReportVersionReason): Promise<boolean> => {
   clearTimeout(autosaveTimer)
   autosaveTimer = undefined
   const run = saveQueue.then(async () => {
@@ -94,9 +114,13 @@ export const saveActiveReport = (): Promise<boolean> => {
         snapshot.id,
         snapshot.title,
         snapshot.content,
-        snapshot.revision
+        snapshot.revision,
+        versionReason ? { id: createId(), reason: versionReason } : undefined
       )
       replaceReport(saved)
+      if (versionReason) {
+        void refreshVersions(saved.id)
+      }
       const current = get().draft
       if (current?.id === saved.id) {
         if (current.title === snapshot.title && current.content === snapshot.content) {
@@ -149,6 +173,21 @@ export const updateReportTitle = (title: string) => updateDraft((draft) => ({ ..
 export const updateReportContent = (content: string) =>
   updateDraft((draft) => ({ ...draft, content }))
 
+export const restoreReportVersion = async (version: ReportVersion): Promise<boolean> => {
+  if (get().draft?.id !== version.reportId || !(await flushActiveReport())) {
+    return false
+  }
+  const draft = get().draft
+  if (!draft) {
+    return false
+  }
+  set({
+    draft: { ...draft, title: version.title, content: version.content },
+    saveStatus: 'dirty',
+  })
+  return saveActiveReport('restore')
+}
+
 export const openReport = async (id: string): Promise<boolean> => {
   const sequence = ++openSequence
   set({ isOpen: true, pending: true })
@@ -185,7 +224,7 @@ export const openReportList = async (): Promise<boolean> => {
     return false
   }
   if (sequence === openSequence) {
-    set({ activeId: null, draft: null, saveStatus: 'saved', pending: false })
+    set({ activeId: null, draft: null, saveStatus: 'saved', pending: false, versions: [] })
   }
   await initReports(true)
   return true

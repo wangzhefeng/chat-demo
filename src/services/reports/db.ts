@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Report } from './types.js'
+import type { Report, ReportVersion, ReportVersionReason } from './types.js'
 
 interface ReportDB extends DBSchema {
   reports: {
@@ -7,15 +7,28 @@ interface ReportDB extends DBSchema {
     value: Report
     indexes: { sourceKey: string }
   }
+  reportVersions: {
+    key: string
+    value: ReportVersion
+    indexes: { reportId: string }
+  }
 }
 
 let dbPromise: Promise<IDBPDatabase<ReportDB>> | null = null
 
 const getDB = () =>
-  (dbPromise ??= openDB<ReportDB>('chat-demo-reports', 1, {
-    upgrade(db) {
-      const reports = db.createObjectStore('reports', { keyPath: 'id' })
-      reports.createIndex('sourceKey', 'sourceKey', { unique: true })
+  (dbPromise ??= openDB<ReportDB>('chat-demo-reports', 2, {
+    upgrade(db, _oldVersion, _newVersion, tx) {
+      const reports = db.objectStoreNames.contains('reports')
+        ? tx.objectStore('reports')
+        : db.createObjectStore('reports', { keyPath: 'id' })
+      if (!reports.indexNames.contains('sourceKey')) {
+        reports.createIndex('sourceKey', 'sourceKey', { unique: true })
+      }
+      if (!db.objectStoreNames.contains('reportVersions')) {
+        const versions = db.createObjectStore('reportVersions', { keyPath: 'id' })
+        versions.createIndex('reportId', 'reportId')
+      }
     },
   }).catch((error: unknown) => {
     dbPromise = null
@@ -56,10 +69,11 @@ export const saveReport = async (
   id: string,
   title: string,
   content: string,
-  expectedRevision: number
+  expectedRevision: number,
+  version?: { id: string; reason: ReportVersionReason }
 ): Promise<Report> => {
-  const tx = (await getDB()).transaction('reports', 'readwrite')
-  const current = await tx.store.get(id)
+  const tx = (await getDB()).transaction(['reports', 'reportVersions'], 'readwrite')
+  const current = await tx.objectStore('reports').get(id)
   if (!current) {
     throw new Error(`Report ${id} is missing from local storage`)
   }
@@ -73,7 +87,23 @@ export const saveReport = async (
     updatedAt: Date.now(),
     revision: current.revision + 1,
   }
-  await tx.store.put(saved)
+  if (version) {
+    await tx.objectStore('reportVersions').put({
+      id: version.id,
+      reportId: current.id,
+      title: current.title,
+      content: current.content,
+      revision: current.revision,
+      reason: version.reason,
+      createdAt: saved.updatedAt,
+    })
+  }
+  await tx.objectStore('reports').put(saved)
   await tx.done
   return saved
+}
+
+export const loadReportVersions = async (reportId: string): Promise<ReportVersion[]> => {
+  const versions = await (await getDB()).getAllFromIndex('reportVersions', 'reportId', reportId)
+  return versions.sort((a, b) => b.createdAt - a.createdAt)
 }

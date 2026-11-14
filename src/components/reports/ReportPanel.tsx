@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { exportReport } from '../../services/reports/report.js'
+import { cancelAiEdit, startAiEdit } from '../../services/reports/aiEdit.js'
 import {
   closeReportPanel,
   initReports,
@@ -19,6 +20,9 @@ import { IconCloseOutline16, IconDownloadOutline16 } from '../base/icons.js'
 import { Modal } from '../base/Modal.js'
 import { Markdown } from '../markdown/Markdown.js'
 import { SourceCard } from '../search/SourceCard.js'
+import { ensureApiKey } from '../settings/settingsDialogState.js'
+import { AiEditReview } from './AiEditReview.js'
+import { VersionHistory } from './VersionHistory.js'
 import styles from './ReportPanel.module.css'
 
 export const ReportPanel = () => {
@@ -34,11 +38,25 @@ export const ReportPanel = () => {
   const pending = useReportStore((state) => state.pending)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [reloadConfirm, setReloadConfirm] = useState(false)
+  const [selection, setSelection] = useState<{ start: number; end: number; text: string } | null>(
+    null
+  )
+  const [aiDialogOpen, setAiDialogOpen] = useState(false)
+  const [instruction, setInstruction] = useState('')
 
   useEffect(() => {
     setMode('edit')
     setReloadConfirm(false)
+    setSelection(null)
+    setAiDialogOpen(false)
+    cancelAiEdit()
   }, [activeId])
+
+  useEffect(() => {
+    if (!isOpen) {
+      cancelAiEdit()
+    }
+  }, [isOpen])
 
   if (!isOpen) {
     return null
@@ -133,6 +151,14 @@ export const ReportPanel = () => {
                 {t('reportPreview')}
               </Button>
             </div>
+            <Button
+              variant="outlined"
+              size="s"
+              disabled={mode !== 'edit' || !selection || saveStatus === 'conflict'}
+              onClick={() => setAiDialogOpen(true)}
+            >
+              {t('reportAiEdit')}
+            </Button>
             <Button variant="outlined" size="s" onClick={download}>
               <IconDownloadOutline16 />
               {t('reportExport')}
@@ -168,13 +194,24 @@ export const ReportPanel = () => {
               </Button>
             </div>
           ) : null}
+          <AiEditReview />
           {mode === 'edit' ? (
             <textarea
               className={styles.textarea}
               aria-label={t('reportContent')}
               value={draft.content}
               disabled={saveStatus === 'conflict'}
-              onChange={(event) => updateReportContent(event.target.value)}
+              onSelect={(event) => {
+                const target = event.currentTarget
+                const { selectionStart: start, selectionEnd: end } = target
+                setSelection(
+                  end > start ? { start, end, text: target.value.slice(start, end) } : null
+                )
+              }}
+              onChange={(event) => {
+                setSelection(null)
+                updateReportContent(event.target.value)
+              }}
             />
           ) : (
             <div className={styles.preview}>
@@ -190,6 +227,7 @@ export const ReportPanel = () => {
               )}
             </div>
           )}
+          <VersionHistory />
           {draft.sources.length > 0 ? (
             <details className={styles.sources}>
               <summary>
@@ -229,6 +267,49 @@ export const ReportPanel = () => {
           }
         >
           {t('reportConflictReloadConfirm')}
+        </Modal>
+      ) : null}
+      {aiDialogOpen && selection ? (
+        <Modal
+          title={t('reportAiEdit')}
+          onClose={() => setAiDialogOpen(false)}
+          footer={
+            <>
+              <Button variant="outlined" onClick={() => setAiDialogOpen(false)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                disabled={!instruction.trim()}
+                onClick={() => {
+                  if (!ensureApiKey()) {
+                    return
+                  }
+                  const { start, end } = selection
+                  setAiDialogOpen(false)
+                  void startAiEdit(instruction, start, end)
+                }}
+              >
+                {t('reportAiStart')}
+              </Button>
+            </>
+          }
+        >
+          <div className={styles.aiForm}>
+            <div>
+              <div className={styles.aiLabel}>{t('reportAiSelection')}</div>
+              <pre className={styles.selectionPreview}>{selection.text}</pre>
+            </div>
+            <label className={styles.aiForm}>
+              <span className={styles.aiLabel}>{t('reportAiInstruction')}</span>
+              <textarea
+                className={styles.instructionInput}
+                rows={3}
+                value={instruction}
+                placeholder={t('reportAiInstructionPlaceholder')}
+                onChange={(event) => setInstruction(event.target.value)}
+              />
+            </label>
+          </div>
         </Modal>
       ) : null}
     </aside>
