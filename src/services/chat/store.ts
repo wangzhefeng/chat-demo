@@ -14,6 +14,7 @@ import {
   getDraft,
   prepareDraftMessage,
 } from './drafts.js'
+import { getRequestContextSnapshot } from '../workspaces/store.js'
 import { createLatestReminder } from './latestReminder.js'
 import {
   applyEvent,
@@ -965,7 +966,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
     titleRequests.add(controller)
   }
   set((state) => ({ streaming: { ...state.streaming, [sessionId]: controller } }))
-  let reply = initial
+  const requestContext = getRequestContextSnapshot(sessionId)
+  let reply = requestContext ? { ...initial, requestContext } : initial
   let frame = 0
   const flush = () => {
     cancelAnimationFrame(frame)
@@ -994,7 +996,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           prepared.question,
           prepared.prefix,
           initial.thinking ?? false,
-          latestReminder
+          latestReminder,
+          requestContext?.text
         )
         const events = streamMessage(
           useSettings.getState().apiKey ?? '',

@@ -16,6 +16,7 @@ import {
   importHistory,
 } from '../../services/chat/backup.js'
 import { useIsMobile } from '../../app/viewport.js'
+import { exportAppData, importAppData } from '../../services/appBackup.js'
 import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
@@ -63,8 +64,9 @@ const SettingsContent = () => {
   const apiKeyEditor = useApiKeyEditor()
   const historyImport = useHistoryImport()
   const historyDelete = useHistoryDelete()
+  const [appDataBusy, setAppDataBusy] = useState(false)
   const replacingHistory = useChatStore((state) => state.importingHistory)
-  const historyBusy = historyImport.busy || historyDelete.busy || replacingHistory
+  const historyBusy = historyImport.busy || historyDelete.busy || replacingHistory || appDataBusy
   return (
     <>
       <Modal
@@ -106,6 +108,8 @@ const SettingsContent = () => {
               <ApiKeyField editor={apiKeyEditor} />
               <ImportHistory historyImport={historyImport} disabled={historyBusy} />
               <ExportHistory disabled={historyBusy} />
+              <ImportAppData disabled={historyBusy} onBusy={setAppDataBusy} />
+              <ExportAppData disabled={historyBusy} onBusy={setAppDataBusy} />
               <SettingCell
                 label={t('deleteAllSessions')}
                 status={null}
@@ -509,6 +513,129 @@ const ImportHistory = ({
         </>
       }
     />
+  )
+}
+
+const ExportAppData = ({
+  disabled,
+  onBusy,
+}: {
+  disabled: boolean
+  onBusy: (busy: boolean) => void
+}) => {
+  const t = useTranslate()
+  const [status, setStatus] = useState<Status>(null)
+  const onExport = async () => {
+    onBusy(true)
+    setStatus(null)
+    try {
+      const { name, blob } = await exportAppData()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = name
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    } catch (error) {
+      setStatus(errorStatus('appDataExportFailed', error))
+    } finally {
+      onBusy(false)
+    }
+  }
+  return (
+    <SettingCell
+      label={t('appDataExport')}
+      description={t('appDataExportDescription')}
+      status={status}
+      action={
+        <Button
+          variant="outlined"
+          size="m"
+          className={styles.cellButton}
+          disabled={disabled}
+          onClick={() => void onExport()}
+        >
+          <IconDownloadOutline16 />
+          {t('exportAllDownload')}
+        </Button>
+      }
+    />
+  )
+}
+
+const ImportAppData = ({
+  disabled,
+  onBusy,
+}: {
+  disabled: boolean
+  onBusy: (busy: boolean) => void
+}) => {
+  const t = useTranslate()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [status, setStatus] = useState<Status>(null)
+  return (
+    <>
+      <SettingCell
+        label={t('appDataImport')}
+        description={t('appDataImportDescription')}
+        status={status}
+        action={
+          <>
+            <Button
+              variant="outlined"
+              size="m"
+              className={styles.cellButton}
+              disabled={disabled}
+              onClick={() => inputRef.current?.click()}
+            >
+              <IconUploadOutline14 />
+              {t('upload')}
+            </Button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".json,application/json"
+              hidden
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null)
+                event.target.value = ''
+              }}
+            />
+          </>
+        }
+      />
+      {file ? (
+        <Modal
+          title={t('appDataImport')}
+          onClose={() => setFile(null)}
+          footer={
+            <>
+              <Button variant="outlined" onClick={() => setFile(null)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  onBusy(true)
+                  void importAppData(file)
+                    .then(() => setStatus({ key: 'appDataImported' }))
+                    .catch(() => setStatus({ key: 'appDataImportFailed', error: true }))
+                    .finally(() => {
+                      onBusy(false)
+                      setFile(null)
+                    })
+                }}
+              >
+                {t('confirm')}
+              </Button>
+            </>
+          }
+        >
+          {t('appDataImportConfirm')}
+        </Modal>
+      ) : null}
+    </>
   )
 }
 

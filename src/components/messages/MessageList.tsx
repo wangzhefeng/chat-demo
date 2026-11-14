@@ -8,6 +8,7 @@ import {
 import { selectMessageVersion } from '../../services/chat/store.js'
 import type { Session } from '../../services/chat/types.js'
 import { closeSearchPanel } from '../search/searchPanelState.js'
+import { closeResearchPanel } from '../research/researchPanelState.js'
 import { AssistantMessage } from './AssistantMessage.js'
 import { ScrollToBottomContext } from './scrollContext.js'
 import { UserMessage } from './UserMessage.js'
@@ -100,6 +101,7 @@ export const MessageList = ({
   }, [session.id, lastMessageId, scrollToBottom])
 
   useEffect(closeSearchPanel, [session.id, lastMessageId])
+  useEffect(closeResearchPanel, [session.id, lastMessageId])
 
   const selectVersion = useCallback(
     (messageId: string, anchorTop: number) => {
@@ -150,7 +152,7 @@ export const MessageList = ({
               message.role === 'user' ? (
                 <UserMessage
                   key={message.id}
-                  sessionId={session.id}
+                  session={session}
                   message={message}
                   retryUploadId={uploadRetryId}
                   isFirst={index === 0}
@@ -162,7 +164,7 @@ export const MessageList = ({
               ) : (
                 <AssistantMessage
                   key={message.id}
-                  sessionId={session.id}
+                  session={session}
                   message={message}
                   isLast={index === lastIndex}
                   streaming={streaming && index === lastIndex}

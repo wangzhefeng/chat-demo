@@ -11,6 +11,12 @@ import {
 } from '../services/chat/store.js'
 import { SearchPanel } from '../components/search/SearchPanel.js'
 import { closeSearchPanel } from '../components/search/searchPanelState.js'
+import { ReportPanel } from '../components/reports/ReportPanel.js'
+import { ResearchPanel } from '../components/research/ResearchPanel.js'
+import { closeResearchPanel } from '../components/research/researchPanelState.js'
+import { WorkspacePanel } from '../components/workspaces/WorkspacePanel.js'
+import { bindWorkspaceSync, initWorkspaces } from '../services/workspaces/store.js'
+import { bindReportPersistence, initReports } from '../services/reports/store.js'
 import { SessionView } from '../components/session/SessionView.js'
 import { MobileHeader } from '../components/session/MobileHeader.js'
 import { Welcome } from '../components/session/Welcome.js'
@@ -59,9 +65,12 @@ export const App = () => {
   // 文件数、存储空间达到上限时，附件上只显示「上传失败」，原因用 toast 说明
   useEffect(() => onUploadNotice(showToast), [])
   useEffect(bindChatPersistence, [])
+  useEffect(bindReportPersistence, [])
+  useEffect(bindWorkspaceSync, [])
 
-  // 搜索结果面板只属于当前会话
+  // 搜索与研究来源面板只属于当前会话
   useEffect(closeSearchPanel, [activeId])
+  useEffect(closeResearchPanel, [activeId])
   // 切换会话时停止朗读
   useEffect(stopReadAloud, [activeId])
   // 移动端选中会话、切换布局后收起抽屉
@@ -69,6 +78,8 @@ export const App = () => {
 
   useEffect(() => {
     void initChat()
+    void initReports()
+    void initWorkspaces()
     // 首次打开先在设置里输入 API Key
     ensureApiKey()
   }, [])
@@ -131,6 +142,9 @@ export const App = () => {
           </div>
         </main>
         <SearchPanel />
+        <ResearchPanel />
+        <ReportPanel />
+        <WorkspacePanel />
       </div>
       <SettingsDialog />
       <Toast />

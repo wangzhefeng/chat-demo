@@ -1,0 +1,68 @@
+.review {
+  flex-shrink: 0;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-base);
+}
+
+.status {
+  margin-bottom: 8px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+}
+
+.diff {
+  max-height: 240px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  font:
+    12px/20px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+}
+
+.diff > div {
+  display: flex;
+  gap: 8px;
+  padding: 0 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff > div > span:first-child {
+  flex-shrink: 0;
+  width: 12px;
+  user-select: none;
+}
+
+.same {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.removed {
+  color: var(--dsw-alias-state-error-primary);
+  background: rgba(200, 60, 60, 0.08);
+}
+
+.added {
+  color: var(--dsw-alias-brand-text);
+  background: rgba(60, 160, 100, 0.1);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.error {
+  margin-bottom: 10px;
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

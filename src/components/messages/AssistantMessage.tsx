@@ -1,18 +1,29 @@
 import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
-import { memo } from 'react'
-import { IconRefreshOutline16, IconWarningOutline16 } from '../base/icons.js'
+import { memo, useState } from 'react'
+import {
+  IconDataOutline16,
+  IconEditOutline16,
+  IconRefreshOutline16,
+  IconWarningOutline16,
+} from '../base/icons.js'
+import { NoteDialog } from '../workspaces/NoteDialog.js'
 import { describeReply } from '../../services/chat/describe.js'
 import { canContinueReply } from '../../services/chat/reply.js'
 import { continueReply, regenerateReply } from '../../services/chat/store.js'
+import { createOrOpenReport } from '../../services/reports/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
-import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
+import type {
+  AssistantMessage as AssistantMessageType,
+  Session,
+} from '../../services/chat/types.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { IconButton } from '../base/IconButton.js'
 import { Button } from '../base/Button.js'
 import { Markdown } from '../markdown/Markdown.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
-import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
+import { closeSearchPanel, toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
+import { closeResearchPanel, toggleResearchPanel } from '../research/researchPanelState.js'
 import { ReadAloudButton } from './ReadAloudButton.js'
 import { CopyButton } from './CopyButton.js'
 import { ReplyArea } from './ReplyArea.js'
@@ -27,7 +38,7 @@ import styles from './AssistantMessage.module.css'
 const TOP_UP_URL = 'https://platform.deepseek.com/top_up'
 
 export const AssistantMessage = memo(function AssistantMessage({
-  sessionId,
+  session,
   message,
   isLast,
   streaming,
@@ -35,7 +46,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   versions,
   onSelectVersion,
 }: {
-  sessionId: string
+  session: Session
   message: AssistantMessageType
   isLast: boolean
   streaming: boolean
@@ -44,6 +55,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   onSelectVersion: SelectMessageVersion
 }) {
   const t = useTranslate()
+  const [noteOpen, setNoteOpen] = useState(false)
   const view = useReplyView(message, streaming)
   const panelEntry = useSearchPanel((state) => state.entry)
   const notice = streaming ? null : describeReply(message)
@@ -56,6 +68,12 @@ export const AssistantMessage = memo(function AssistantMessage({
   const copyText = responseText || notice?.text
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
+  const contextTypeLabels = {
+    session: t('contextSession'),
+    note: t('contextNote'),
+    report: t('contextReport'),
+    material: t('contextMaterial'),
+  }
   return (
     <div className={styles.message}>
       {refused ? null : (
@@ -75,6 +93,21 @@ export const AssistantMessage = memo(function AssistantMessage({
           disableLink={false}
           sources={view.sources}
         />
+      ) : null}
+      {!streaming && message.requestContext ? (
+        <details className={styles.requestContext}>
+          <summary>
+            {t('requestContext')} ({message.requestContext.items.length})
+          </summary>
+          <div className={styles.requestContextDescription}>{t('requestContextDescription')}</div>
+          <ul>
+            {message.requestContext.items.map((item) => (
+              <li key={`${item.type}:${item.id}`}>
+                {contextTypeLabels[item.type]} · {item.title}
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
       {waiting ? (
         <div className={styles.waiting}>
@@ -124,18 +157,39 @@ export const AssistantMessage = memo(function AssistantMessage({
           </span>
         </div>
       ) : null}
-      {!streaming && !refused && view.searchResults.length > 0 ? (
-        <div
-          className={clsx(styles.summary, panelEntry === summaryEntry && styles.summaryActive)}
-          onClick={() => toggleSearchPanel(summaryEntry, view.searchResults)}
-        >
-          <SiteThumbnails sources={view.searchResults} />
-          <span>
-            {t(
-              view.searchResults.length === 1 ? 'messageSearchSummary' : 'messageSearchSummaries',
-              { count: view.searchResults.length }
-            )}
-          </span>
+      {!streaming &&
+      !refused &&
+      (view.searchResults.length > 0 ||
+        view.sources.length > 0 ||
+        view.researchIssues.length > 0) ? (
+        <div className={styles.research}>
+          {view.searchResults.length > 0 ? (
+            <div
+              className={clsx(styles.summary, panelEntry === summaryEntry && styles.summaryActive)}
+              onClick={() => toggleSearchPanel(summaryEntry, view.searchResults)}
+            >
+              <SiteThumbnails sources={view.searchResults} />
+              <span>
+                {t(
+                  view.searchResults.length === 1
+                    ? 'messageSearchSummary'
+                    : 'messageSearchSummaries',
+                  { count: view.searchResults.length }
+                )}
+              </span>
+            </div>
+          ) : null}
+          <Button
+            variant="outlined"
+            size="s"
+            className={styles.sourceButton}
+            onClick={() => {
+              closeSearchPanel()
+              toggleResearchPanel(`${message.id}-research`, view.sources, view.researchIssues)
+            }}
+          >
+            {t('researchSources')}
+          </Button>
         </div>
       ) : null}
       {streaming ? null : (
@@ -143,6 +197,27 @@ export const AssistantMessage = memo(function AssistantMessage({
           <BranchSwitcher versions={versions} disabled={busy} onSelect={onSelectVersion} />
           <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
             {copyText ? <CopyButton text={copyText} /> : null}
+            {answer && !refused ? (
+              <IconButton
+                icon={<IconEditOutline16 />}
+                tooltip={t('createReport')}
+                tooltipPlacement="bottom"
+                disabled={busy}
+                onClick={() => {
+                  closeSearchPanel()
+                  closeResearchPanel()
+                  void createOrOpenReport(session, message)
+                }}
+              />
+            ) : null}
+            {responseText && !refused ? (
+              <IconButton
+                icon={<IconDataOutline16 />}
+                tooltip={t('workspaceAddNote')}
+                tooltipPlacement="bottom"
+                onClick={() => setNoteOpen(true)}
+              />
+            ) : null}
             {responseText && !refused ? (
               <ReadAloudButton messageId={message.id} text={responseText} />
             ) : null}
@@ -153,7 +228,7 @@ export const AssistantMessage = memo(function AssistantMessage({
               disabled={busy || refused}
               onClick={() => {
                 stopReadAloud()
-                regenerateReply(sessionId, message.id)
+                regenerateReply(session.id, message.id)
               }}
             />
           </div>
@@ -165,7 +240,7 @@ export const AssistantMessage = memo(function AssistantMessage({
               disabled={busy}
               onClick={() => {
                 stopReadAloud()
-                continueReply(sessionId, message.id)
+                continueReply(session.id, message.id)
               }}
             >
               {t('continueGenerating')}
@@ -173,6 +248,9 @@ export const AssistantMessage = memo(function AssistantMessage({
           ) : null}
         </div>
       )}
+      {noteOpen ? (
+        <NoteDialog session={session} message={message} onClose={() => setNoteOpen(false)} />
+      ) : null}
     </div>
   )
 })

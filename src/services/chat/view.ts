@@ -13,6 +13,8 @@ import type { AssistantMessage, ThinkingPart } from './types.js'
  * 只做纯计算，不改动内容块（内容块要原样回传）。
  */
 
+export type ReadStatus = 'unconfirmed' | 'reading' | 'read' | 'failed'
+
 export type Source = {
   url: string
   title: string
@@ -25,6 +27,14 @@ export type Source = {
   siteIcon: string | null
   /** 引用角标与搜索结果列表上的编号，从 1 开始 */
   index: number
+  foundInSearch: boolean
+  readStatus: ReadStatus
+  cited: boolean
+}
+
+export type ResearchIssue = {
+  id: string
+  type: 'search-failed' | 'search-empty'
 }
 
 export type ToolStatus = 'wip' | 'done' | 'failed'
@@ -71,11 +81,12 @@ export type Step = SearchStep | OpenStep | FindStep | ReadLinkStep | ThinkingSte
 export type ReplyView = {
   steps: Step[]
   /** 最后一个思考或工具块之后的正文；markdown 里在引用处插入了 [citation:N] */
-  answer: { markdown: string; text: string } | null
-  /** 正文引用可指向的全部来源，按编号排列 */
+  answer: { markdown: string; portableMarkdown: string; text: string } | null
+  /** 正文引用、搜索及阅读记录可指向的全部来源，按编号排列 */
   sources: Source[]
   /** 搜索到的网页（去重），用于底部汇总与搜索结果列表 */
   searchResults: Source[]
+  researchIssues: ResearchIssue[]
 }
 
 export const getSiteName = (url: string) => {
@@ -113,7 +124,8 @@ class SourceRegistry {
     url: string,
     title: string | null,
     publishedAt: string | null,
-    metadata?: Pick<WebSearchResult, 'snippet' | 'site_icon' | 'site_name'>
+    metadata?: Pick<WebSearchResult, 'snippet' | 'site_icon' | 'site_name'>,
+    evidence: Partial<Pick<Source, 'foundInSearch' | 'readStatus' | 'cited'>> = {}
   ): Source {
     const siteName = metadata?.site_name?.trim() || getSiteName(url)
     const snippet = metadata?.snippet?.trim() || null
@@ -130,6 +142,12 @@ class SourceRegistry {
       existing.publishedAt ||= publishedAt
       existing.snippet ||= snippet
       existing.siteIcon ||= siteIcon
+      existing.foundInSearch ||= evidence.foundInSearch ?? false
+      existing.cited ||= evidence.cited ?? false
+      const rank = { unconfirmed: 0, reading: 1, failed: 2, read: 3 }
+      if (evidence.readStatus && rank[evidence.readStatus] > rank[existing.readStatus]) {
+        existing.readStatus = evidence.readStatus
+      }
       return existing
     }
     const source: Source = {
@@ -140,6 +158,9 @@ class SourceRegistry {
       snippet,
       siteIcon,
       index: this.list.length + 1,
+      foundInSearch: evidence.foundInSearch ?? false,
+      readStatus: evidence.readStatus ?? 'unconfirmed',
+      cited: evidence.cited ?? false,
     }
     this.list.push(source)
     this.byUrl.set(url, source)
@@ -156,21 +177,32 @@ const joinTextBlocks = (
   registry: SourceRegistry
 ) => {
   let markdown = ''
+  let portableMarkdown = ''
   let text = ''
   for (const block of blocks) {
     text += block.text
     const indexes = new Set<number>()
     for (const citation of block.citations ?? []) {
-      indexes.add(registry.add(citation.url, citation.title, null).index)
+      indexes.add(
+        registry.add(citation.url, citation.title, null, undefined, { cited: true }).index
+      )
     }
     const body = indexes.size > 0 ? block.text.trimEnd() : block.text
     markdown += body
+    portableMarkdown += body
     for (const index of indexes) {
       markdown += `[citation:${index}]`
+      const url = registry.list[index - 1]?.url.replace(/[<>]/g, (char) =>
+        char === '<' ? '%3C' : '%3E'
+      )
+      if (url) {
+        portableMarkdown += `[${index}](<${url}>)`
+      }
     }
     markdown += block.text.slice(body.length)
+    portableMarkdown += block.text.slice(body.length)
   }
-  return { markdown, text }
+  return { markdown, portableMarkdown, text }
 }
 
 export const buildReplyView = (reply: AssistantMessage, streaming: boolean): ReplyView => {
@@ -183,6 +215,7 @@ export const buildReplyView = (reply: AssistantMessage, streaming: boolean): Rep
 
   const registry = new SourceRegistry()
   const searchResults: Source[] = []
+  const researchIssues: ResearchIssue[] = []
   const steps: Step[] = []
   const mergedSearch = new Map<ServerToolKind, SearchStep>()
   let mergedThinking: ThinkingStep | null = null
@@ -194,21 +227,41 @@ export const buildReplyView = (reply: AssistantMessage, streaming: boolean): Rep
       continue
     }
     const result = results.get(block.id)
-    if (result?.type === 'web_search_tool_result') {
-      for (const item of result.content) {
-        if (item.type === 'web_search_result') {
-          const source = registry.add(item.url, item.title, item.page_age, item)
-          if (!searchResults.includes(source)) {
-            searchResults.push(source)
+    if (block.input.action === 'search') {
+      if (result?.type === 'web_search_tool_result') {
+        const failed = result.content.some((item) => item.type === 'web_search_tool_result_error')
+        if (failed || result.content.length === 0) {
+          researchIssues.push({ id: block.id, type: failed ? 'search-failed' : 'search-empty' })
+        }
+        for (const item of result.content) {
+          if (item.type === 'web_search_result') {
+            const source = registry.add(item.url, item.title, item.page_age, item, {
+              foundInSearch: true,
+            })
+            if (!searchResults.includes(source)) {
+              searchResults.push(source)
+            }
           }
         }
+      } else if (!streaming) {
+        researchIssues.push({ id: block.id, type: 'search-failed' })
       }
-    } else if (
-      result?.type === 'web_fetch_tool_result' &&
-      result.content.type === 'web_fetch_result' &&
-      block.kind === 'deep_search'
-    ) {
-      registry.add(result.content.url, result.content.content.title, result.content.published_at)
+    } else if (result?.type === 'web_fetch_tool_result') {
+      const url =
+        block.input.url || (result.content.type === 'web_fetch_result' ? result.content.url : '')
+      if (url) {
+        registry.add(
+          result.content.type === 'web_fetch_result' ? result.content.url : url,
+          result.content.type === 'web_fetch_result' ? result.content.content.title : null,
+          result.content.type === 'web_fetch_result' ? result.content.published_at : null,
+          undefined,
+          { readStatus: result.content.type === 'web_fetch_result' ? 'read' : 'failed' }
+        )
+      }
+    } else if (block.input.url) {
+      registry.add(block.input.url, null, null, undefined, {
+        readStatus: streaming ? 'reading' : 'failed',
+      })
     }
   }
 
@@ -343,6 +396,7 @@ export const buildReplyView = (reply: AssistantMessage, streaming: boolean): Rep
     answer: answer && answer.text ? answer : null,
     sources: registry.list,
     searchResults,
+    researchIssues,
   }
 }
 
