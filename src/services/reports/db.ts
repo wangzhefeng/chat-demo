@@ -103,6 +103,25 @@ export const saveReport = async (
   return saved
 }
 
+export const loadAllReportVersions = async (): Promise<ReportVersion[]> =>
+  (await getDB()).getAll('reportVersions')
+
+export const replaceReportData = async (
+  reports: Report[],
+  versions: ReportVersion[]
+): Promise<void> => {
+  const tx = (await getDB()).transaction(['reports', 'reportVersions'], 'readwrite')
+  await tx.objectStore('reports').clear()
+  await tx.objectStore('reportVersions').clear()
+  for (const report of reports) {
+    await tx.objectStore('reports').put(report)
+  }
+  for (const version of versions) {
+    await tx.objectStore('reportVersions').put(version)
+  }
+  await tx.done
+}
+
 export const loadReportVersions = async (reportId: string): Promise<ReportVersion[]> => {
   const versions = await (await getDB()).getAllFromIndex('reportVersions', 'reportId', reportId)
   return versions.sort((a, b) => b.createdAt - a.createdAt)

@@ -15,7 +15,7 @@ import { ReportPanel } from '../components/reports/ReportPanel.js'
 import { ResearchPanel } from '../components/research/ResearchPanel.js'
 import { closeResearchPanel } from '../components/research/researchPanelState.js'
 import { WorkspacePanel } from '../components/workspaces/WorkspacePanel.js'
-import { initWorkspaces } from '../services/workspaces/store.js'
+import { bindWorkspaceSync, initWorkspaces } from '../services/workspaces/store.js'
 import { bindReportPersistence, initReports } from '../services/reports/store.js'
 import { SessionView } from '../components/session/SessionView.js'
 import { MobileHeader } from '../components/session/MobileHeader.js'
@@ -66,6 +66,7 @@ export const App = () => {
   useEffect(() => onUploadNotice(showToast), [])
   useEffect(bindChatPersistence, [])
   useEffect(bindReportPersistence, [])
+  useEffect(bindWorkspaceSync, [])
 
   // 搜索与研究来源面板只属于当前会话
   useEffect(closeSearchPanel, [activeId])

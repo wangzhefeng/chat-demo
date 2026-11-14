@@ -35,6 +35,11 @@ let openSequence = 0
 let autosaveTimer: ReturnType<typeof setTimeout> | undefined
 let saveQueue: Promise<unknown> = Promise.resolve()
 let versionSequence = 0
+let syncChannel: BroadcastChannel | undefined
+
+const notifyReportChange = (id: string) => {
+  syncChannel?.postMessage({ type: 'saved', id })
+}
 
 const sortReports = (reports: Report[]) => [...reports].sort((a, b) => b.updatedAt - a.updatedAt)
 
@@ -118,6 +123,7 @@ export const saveActiveReport = (versionReason?: ReportVersionReason): Promise<b
         versionReason ? { id: createId(), reason: versionReason } : undefined
       )
       replaceReport(saved)
+      notifyReportChange(saved.id)
       if (versionReason) {
         void refreshVersions(saved.id)
       }
@@ -251,6 +257,7 @@ export const createOrOpenReport = async (
     }
     const report = await db.createReport(snapshot)
     replaceReport(report)
+    notifyReportChange(report.id)
     if (sequence === openSequence) {
       activate(report)
     }
@@ -290,6 +297,19 @@ export const closeReportPanel = () => {
 }
 
 export const bindReportPersistence = () => {
+  if (typeof BroadcastChannel !== 'undefined' && !syncChannel) {
+    syncChannel = new BroadcastChannel('chat-demo-reports-sync')
+    syncChannel.onmessage = (event: MessageEvent<{ type?: string; id?: string }>) => {
+      if (event.data.type !== 'saved') {
+        return
+      }
+      void initReports(true)
+      const { activeId, saveStatus } = get()
+      if (activeId === event.data.id && saveStatus === 'saved') {
+        void reloadActiveReport()
+      }
+    }
+  }
   const save = () => {
     if (get().saveStatus === 'dirty' || get().saveStatus === 'error') {
       void saveActiveReport()
@@ -305,5 +325,7 @@ export const bindReportPersistence = () => {
   return () => {
     document.removeEventListener('visibilitychange', onVisibilityChange)
     window.removeEventListener('pagehide', save)
+    syncChannel?.close()
+    syncChannel = undefined
   }
 }

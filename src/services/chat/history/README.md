@@ -50,6 +50,8 @@ chat_sessions/{session_id}_files/{file_id}_{file_name}  全部图片原件
 
 报告存放在独立的 `chat-demo-reports` IndexedDB 数据库中。导入历史或删除全部对话不会替换、清空报告；报告需从报告面板单独导出为 Markdown。
 
+设置中的应用数据备份是另一种 JSON 格式，统一包含会话、报告、版本、工作区、笔记和元数据，但不包含附件原件、API Key 或设置。它使用内部存储结构，不能代替上述 DeepSeek 历史 ZIP 的兼容导入。
+
 ## 模块与 ZIP 支持
 
 | 文件                                                                           | 职责                           |

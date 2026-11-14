@@ -11,6 +11,9 @@ import {
   createWorkspace,
   getRequestContextSnapshot,
   initWorkspaces,
+  removeMaterial,
+  removeNote,
+  removeWorkspace,
   searchWorkspace,
   setSessionFavorite,
   setSessionTags,
@@ -120,6 +123,33 @@ describe('topic workspaces', () => {
       favorite: true,
       tags: ['research', 'database'],
     })
+  })
+
+  it('cleans notes, materials and context while preserving source chats and reports', async () => {
+    const { workspaceId, session, report } = await setupWorkspace()
+    const note = useWorkspaceStore.getState().notes[0]
+    const workspace = useWorkspaceStore
+      .getState()
+      .workspaces.find((item) => item.id === workspaceId)
+    const material = workspace?.materials[0]
+    if (!note || !material) {
+      throw new Error('Expected workspace fixtures')
+    }
+    await toggleContextItem(workspaceId, 'noteIds', note.id)
+    await toggleContextItem(workspaceId, 'materialIds', material.id)
+    await removeNote(workspaceId, note.id)
+    await removeMaterial(workspaceId, material.id)
+    const updated = useWorkspaceStore.getState().workspaces.find((item) => item.id === workspaceId)
+    expect(updated?.context.noteIds).toEqual([])
+    expect(updated?.context.materialIds).toEqual([])
+    expect(updated?.materials).toEqual([])
+
+    await removeWorkspace(workspaceId)
+    expect(useWorkspaceStore.getState().workspaces.some((item) => item.id === workspaceId)).toBe(
+      false
+    )
+    expect(await chatDb.loadSession(session.id)).not.toBeUndefined()
+    expect(await reportDb.loadReport(report.id)).not.toBeUndefined()
   })
 })
 

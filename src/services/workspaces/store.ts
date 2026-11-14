@@ -45,6 +45,30 @@ export const useWorkspaceStore = create<WorkspaceState>(() => ({
 const { getState: get, setState: set } = useWorkspaceStore
 let initTask: Promise<void> | undefined
 let cacheSequence = 0
+let syncChannel: BroadcastChannel | undefined
+
+const notifyWorkspaceChange = () => syncChannel?.postMessage({ type: 'changed' })
+
+export const bindWorkspaceSync = () => {
+  if (typeof BroadcastChannel !== 'undefined' && !syncChannel) {
+    syncChannel = new BroadcastChannel('chat-demo-workspaces-sync')
+    syncChannel.onmessage = () => {
+      void (async () => {
+        const [workspaces, notes, sessionMetadata] = await Promise.all([
+          db.loadWorkspaces(),
+          db.loadNotes(),
+          db.loadSessionMetadata(),
+        ])
+        set({ workspaces, notes, sessionMetadata })
+        await rebuildContextCache(workspaces, notes)
+      })()
+    }
+  }
+  return () => {
+    syncChannel?.close()
+    syncChannel = undefined
+  }
+}
 
 const sessionText = (session: Session) =>
   getVisibleMessages(session)
@@ -168,6 +192,7 @@ export const createWorkspace = async (name: string, description: string): Promis
   }
   await db.saveWorkspace(workspace)
   set((state) => ({ workspaces: [...state.workspaces, workspace], activeId: workspace.id }))
+  notifyWorkspaceChange()
   return workspace.id
 }
 
@@ -186,6 +211,7 @@ export const updateWorkspace = async (
     const workspaces = get().workspaces.map((item) => (item.id === id ? workspace : item))
     set({ workspaces, loadError: false })
     await rebuildContextCache(workspaces, get().notes)
+    notifyWorkspaceChange()
     return true
   } catch {
     set({ loadError: true })
@@ -247,6 +273,7 @@ export const setSessionFavorite = async (sessionId: string, favorite: boolean) =
       next,
     ],
   }))
+  notifyWorkspaceChange()
 }
 
 export const setSessionTags = async (sessionId: string, tags: string[]) => {
@@ -260,6 +287,7 @@ export const setSessionTags = async (sessionId: string, tags: string[]) => {
       next,
     ],
   }))
+  notifyWorkspaceChange()
 }
 
 export const addNoteFromMessage = async (
@@ -296,6 +324,45 @@ export const addNoteFromMessage = async (
     return false
   }
 }
+
+export const removeWorkspace = async (id: string): Promise<boolean> => {
+  try {
+    await db.deleteWorkspace(id)
+    set((state) => ({
+      workspaces: state.workspaces.filter((workspace) => workspace.id !== id),
+      notes: state.notes.filter((note) => note.workspaceId !== id),
+      activeId: state.activeId === id ? null : state.activeId,
+    }))
+    await rebuildContextCache(get().workspaces, get().notes)
+    notifyWorkspaceChange()
+    return true
+  } catch {
+    set({ loadError: true })
+    return false
+  }
+}
+
+export const removeNote = async (workspaceId: string, noteId: string) => {
+  await db.deleteNote(noteId)
+  set((state) => ({ notes: state.notes.filter((note) => note.id !== noteId) }))
+  return updateWorkspace(workspaceId, (workspace) => ({
+    ...workspace,
+    context: {
+      ...workspace.context,
+      noteIds: workspace.context.noteIds.filter((id) => id !== noteId),
+    },
+  }))
+}
+
+export const removeMaterial = (workspaceId: string, materialId: string) =>
+  updateWorkspace(workspaceId, (workspace) => ({
+    ...workspace,
+    materials: workspace.materials.filter((material) => material.id !== materialId),
+    context: {
+      ...workspace.context,
+      materialIds: workspace.context.materialIds.filter((id) => id !== materialId),
+    },
+  }))
 
 export const getRequestContextSnapshot = (
   sessionId: string

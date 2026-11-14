@@ -331,4 +331,23 @@ export const en = {
   contextMaterial: 'Source link',
   requestContext: 'Request context',
   requestContextDescription: 'Only these items are sent with this request',
+  workspaceDelete: 'Delete workspace',
+  workspaceDeleteConfirm:
+    'This deletes the workspace, its notes, and source links. Original chats and reports are preserved. Continue?',
+  workspaceDeleteItemConfirm: 'Delete this local item?',
+  workspaceDeleteNote: 'Delete note',
+  workspaceContextSize: 'Selected context: approximately {count} characters',
+  workspaceContextLarge:
+    'The selected content is large and may increase token usage and affect answers. Select fewer items.',
+  workspaceExternalChange: 'Workspaces were updated in another tab and have been refreshed',
+  appDataImport: 'Import application backup',
+  appDataImportDescription:
+    'Restore chats, reports, versions, workspaces, notes, and metadata. Original attachments, API keys, and settings are not included.',
+  appDataImportConfirm: 'The backup replaces the current structured application data. Import it?',
+  appDataImported: 'Application data imported',
+  appDataImportFailed: 'The application backup is invalid or could not be imported',
+  appDataExport: 'Export application backup',
+  appDataExportDescription:
+    'Export all structured application data. Original attachments, API keys, and settings are excluded.',
+  appDataExportFailed: 'Application data export failed: {message}',
 } satisfies Record<keyof typeof zh, string>

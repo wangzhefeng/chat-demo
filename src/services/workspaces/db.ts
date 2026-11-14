@@ -40,3 +40,39 @@ export const saveNote = async (note: WorkspaceNote): Promise<void> => {
 export const saveSessionMetadata = async (metadata: SessionMetadata): Promise<void> => {
   await (await getDB()).put('sessionMetadata', metadata)
 }
+
+export const deleteWorkspace = async (id: string): Promise<void> => {
+  const tx = (await getDB()).transaction(['workspaces', 'notes'], 'readwrite')
+  await tx.objectStore('workspaces').delete(id)
+  const notes = tx.objectStore('notes')
+  for (let cursor = await notes.index('workspaceId').openCursor(id); cursor; ) {
+    await cursor.delete()
+    cursor = await cursor.continue()
+  }
+  await tx.done
+}
+
+export const deleteNote = async (id: string): Promise<void> => {
+  await (await getDB()).delete('notes', id)
+}
+
+export const replaceWorkspaceData = async (
+  workspaces: Workspace[],
+  notes: WorkspaceNote[],
+  sessionMetadata: SessionMetadata[]
+): Promise<void> => {
+  const tx = (await getDB()).transaction(['workspaces', 'notes', 'sessionMetadata'], 'readwrite')
+  await tx.objectStore('workspaces').clear()
+  await tx.objectStore('notes').clear()
+  await tx.objectStore('sessionMetadata').clear()
+  for (const workspace of workspaces) {
+    await tx.objectStore('workspaces').put(workspace)
+  }
+  for (const note of notes) {
+    await tx.objectStore('notes').put(note)
+  }
+  for (const metadata of sessionMetadata) {
+    await tx.objectStore('sessionMetadata').put(metadata)
+  }
+  await tx.done
+}

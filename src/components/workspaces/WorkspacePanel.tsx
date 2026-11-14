@@ -7,6 +7,9 @@ import {
   addWorkspaceMaterial,
   closeWorkspaces,
   createWorkspace,
+  removeMaterial,
+  removeNote,
+  removeWorkspace,
   searchWorkspace,
   setSessionFavorite,
   setSessionTags,
@@ -21,6 +24,7 @@ import type { WorkspaceSearchResult } from '../../services/workspaces/types.js'
 import { Button } from '../base/Button.js'
 import { IconButton } from '../base/IconButton.js'
 import { IconCloseOutline16 } from '../base/icons.js'
+import { Modal } from '../base/Modal.js'
 import styles from './WorkspacePanel.module.css'
 
 export const WorkspacePanel = () => {
@@ -32,9 +36,25 @@ export const WorkspacePanel = () => {
   const workspaces = useWorkspaceStore((state) => state.workspaces)
   const notes = useWorkspaceStore((state) => state.notes)
   const metadata = useWorkspaceStore((state) => state.sessionMetadata)
+  const contextCache = useWorkspaceStore((state) => state.contextCache)
   const sessions = useChatStore((state) => state.sessions)
   const reports = useReportStore((state) => state.reports)
   const workspace = workspaces.find((item) => item.id === activeId)
+  const contextSize = workspace
+    ? (
+        [
+          ['session', workspace.context.sessionIds],
+          ['note', workspace.context.noteIds],
+          ['report', workspace.context.reportIds],
+          ['material', workspace.context.materialIds],
+        ] as const
+      ).reduce(
+        (total, [type, ids]) =>
+          total +
+          ids.reduce((size, id) => size + (contextCache[`${type}:${id}`]?.text.length ?? 0), 0),
+        0
+      )
+    : 0
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [createName, setCreateName] = useState('')
@@ -44,6 +64,10 @@ export const WorkspacePanel = () => {
   const [searched, setSearched] = useState(false)
   const [materialInput, setMaterialInput] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<{
+    kind: 'workspace' | 'note' | 'material'
+    id: string
+  } | null>(null)
 
   useEffect(() => {
     setName(workspace?.name ?? '')
@@ -140,9 +164,18 @@ export const WorkspacePanel = () => {
       ) : (
         <div className={styles.content}>
           {loadError ? <div className={styles.error}>{t('workspaceSaveFailed')}</div> : null}
-          <Button variant="outlined" size="s" onClick={showWorkspaceList}>
-            {t('workspaceBack')}
-          </Button>
+          <div className={styles.itemRow}>
+            <Button variant="outlined" size="s" onClick={showWorkspaceList}>
+              {t('workspaceBack')}
+            </Button>
+            <Button
+              variant="dangerOutlined"
+              size="s"
+              onClick={() => setDeleting({ kind: 'workspace', id: workspace.id })}
+            >
+              {t('workspaceDelete')}
+            </Button>
+          </div>
           <div className={styles.details}>
             <input
               className={styles.input}
@@ -179,6 +212,14 @@ export const WorkspacePanel = () => {
                 workspace.context.materialIds.length,
             })}
           </div>
+          {contextSize > 0 ? (
+            <div className={styles.itemMeta}>
+              {t('workspaceContextSize', { count: contextSize })}
+              {contextSize > 12_000 ? (
+                <div className={styles.error}>{t('workspaceContextLarge')}</div>
+              ) : null}
+            </div>
+          ) : null}
           <section className={styles.section}>
             <div className={styles.sectionTitle}>{t('workspaceSearch')}</div>
             <div className={styles.searchRow}>
@@ -289,6 +330,13 @@ export const WorkspacePanel = () => {
                       />
                       {t('workspaceUseContext')}
                     </label>
+                    <Button
+                      variant="dangerOutlined"
+                      size="s"
+                      onClick={() => setDeleting({ kind: 'note', id: note.id })}
+                    >
+                      {t('workspaceDeleteNote')}
+                    </Button>
                   </div>
                 ))
             )}
@@ -346,6 +394,13 @@ export const WorkspacePanel = () => {
                   />
                   {t('workspaceUseContext')}
                 </label>
+                <Button
+                  variant="dangerOutlined"
+                  size="s"
+                  onClick={() => setDeleting({ kind: 'material', id: material.id })}
+                >
+                  {t('delete')}
+                </Button>
               </div>
             ))}
             <textarea
@@ -379,6 +434,48 @@ export const WorkspacePanel = () => {
           </section>
         </div>
       )}
+      {deleting ? (
+        <Modal
+          title={t('delete')}
+          onClose={() => setDeleting(null)}
+          footer={
+            <>
+              <Button variant="outlined" onClick={() => setDeleting(null)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  const target = deleting
+                  void (async () => {
+                    if (target.kind === 'workspace') {
+                      return removeWorkspace(target.id)
+                    }
+                    if (!workspace) {
+                      return false
+                    }
+                    return target.kind === 'note'
+                      ? removeNote(workspace.id, target.id)
+                      : removeMaterial(workspace.id, target.id)
+                  })()
+                    .then((removed) => {
+                      if (removed) {
+                        setDeleting(null)
+                      }
+                    })
+                    .catch(() => setError(t('workspaceSaveFailed')))
+                }}
+              >
+                {t('delete')}
+              </Button>
+            </>
+          }
+        >
+          {t(
+            deleting.kind === 'workspace' ? 'workspaceDeleteConfirm' : 'workspaceDeleteItemConfirm'
+          )}
+        </Modal>
+      ) : null}
     </aside>
   )
 }
