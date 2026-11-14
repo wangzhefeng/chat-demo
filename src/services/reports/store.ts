@@ -13,6 +13,7 @@ type ReportState = {
   activeId: string | null
   draft: Report | null
   saveStatus: ReportSaveStatus
+  saveError: string | null
   pending: boolean
   versions: ReportVersion[]
 }
@@ -25,6 +26,7 @@ export const useReportStore = create<ReportState>(() => ({
   activeId: null,
   draft: null,
   saveStatus: 'saved',
+  saveError: null,
   pending: false,
   versions: [],
 }))
@@ -69,6 +71,7 @@ const activate = (report: Report) => {
     saveStatus: 'saved',
     pending: false,
     loadError: false,
+    saveError: null,
     versions: [],
   })
   void refreshVersions(report.id)
@@ -113,7 +116,7 @@ export const saveActiveReport = (versionReason?: ReportVersionReason): Promise<b
       return false
     }
     const snapshot = draft
-    set({ saveStatus: 'saving' })
+    set({ saveStatus: 'saving', saveError: null })
     try {
       const saved = await db.saveReport(
         snapshot.id,
@@ -130,7 +133,7 @@ export const saveActiveReport = (versionReason?: ReportVersionReason): Promise<b
       const current = get().draft
       if (current?.id === saved.id) {
         if (current.title === snapshot.title && current.content === snapshot.content) {
-          set({ draft: { ...saved }, saveStatus: 'saved' })
+          set({ draft: { ...saved }, saveStatus: 'saved', saveError: null })
         } else {
           set({
             draft: { ...current, revision: saved.revision, updatedAt: saved.updatedAt },
@@ -141,7 +144,10 @@ export const saveActiveReport = (versionReason?: ReportVersionReason): Promise<b
       return true
     } catch (error) {
       if (get().draft?.id === snapshot.id) {
-        set({ saveStatus: error instanceof db.ReportConflictError ? 'conflict' : 'error' })
+        set({
+          saveStatus: error instanceof db.ReportConflictError ? 'conflict' : 'error',
+          saveError: error instanceof Error ? error.message : String(error),
+        })
       }
       return false
     }

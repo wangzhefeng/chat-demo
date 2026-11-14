@@ -17,7 +17,7 @@ interface ReportDB extends DBSchema {
 let dbPromise: Promise<IDBPDatabase<ReportDB>> | null = null
 
 const getDB = () =>
-  (dbPromise ??= openDB<ReportDB>('chat-demo-reports', 2, {
+  (dbPromise ??= openDB<ReportDB>('chat-demo-reports', 3, {
     upgrade(db, _oldVersion, _newVersion, tx) {
       const reports = db.objectStoreNames.contains('reports')
         ? tx.objectStore('reports')

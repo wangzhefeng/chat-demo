@@ -35,6 +35,7 @@ export const ReportPanel = () => {
   const activeId = useReportStore((state) => state.activeId)
   const draft = useReportStore((state) => state.draft)
   const saveStatus = useReportStore((state) => state.saveStatus)
+  const saveError = useReportStore((state) => state.saveError)
   const pending = useReportStore((state) => state.pending)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [reloadConfirm, setReloadConfirm] = useState(false)
@@ -66,7 +67,7 @@ export const ReportPanel = () => {
     saved: t('reportSaved'),
     dirty: t('reportUnsaved'),
     saving: t('reportSaving'),
-    error: t('reportSaveFailed'),
+    error: saveError ? `${t('reportSaveFailed')}: ${saveError}` : t('reportSaveFailed'),
     conflict: t('reportConflict'),
   }[saveStatus]
 
