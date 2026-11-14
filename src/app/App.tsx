@@ -14,6 +14,8 @@ import { closeSearchPanel } from '../components/search/searchPanelState.js'
 import { ReportPanel } from '../components/reports/ReportPanel.js'
 import { ResearchPanel } from '../components/research/ResearchPanel.js'
 import { closeResearchPanel } from '../components/research/researchPanelState.js'
+import { WorkspacePanel } from '../components/workspaces/WorkspacePanel.js'
+import { initWorkspaces } from '../services/workspaces/store.js'
 import { bindReportPersistence, initReports } from '../services/reports/store.js'
 import { SessionView } from '../components/session/SessionView.js'
 import { MobileHeader } from '../components/session/MobileHeader.js'
@@ -76,6 +78,7 @@ export const App = () => {
   useEffect(() => {
     void initChat()
     void initReports()
+    void initWorkspaces()
     // 首次打开先在设置里输入 API Key
     ensureApiKey()
   }, [])
@@ -140,6 +143,7 @@ export const App = () => {
         <SearchPanel />
         <ResearchPanel />
         <ReportPanel />
+        <WorkspacePanel />
       </div>
       <SettingsDialog />
       <Toast />

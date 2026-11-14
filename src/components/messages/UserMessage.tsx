@@ -2,10 +2,11 @@ import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
 import { memo, useLayoutEffect, useRef, useState } from 'react'
 import { useIsMobile } from '../../app/viewport.js'
-import { IconEditOutline16 } from '../base/icons.js'
+import { IconDataOutline16, IconEditOutline16 } from '../base/icons.js'
+import { NoteDialog } from '../workspaces/NoteDialog.js'
 import { editMessage, retryUpload } from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
-import type { UserMessage as UserMessageType } from '../../services/chat/types.js'
+import type { Session, UserMessage as UserMessageType } from '../../services/chat/types.js'
 import { Button } from '../base/Button.js'
 import { IconButton } from '../base/IconButton.js'
 import { ensureApiKey } from '../settings/settingsDialogState.js'
@@ -19,7 +20,7 @@ import { CopyButton } from './CopyButton.js'
 import styles from './UserMessage.module.css'
 
 export const UserMessage = memo(function UserMessage({
-  sessionId,
+  session,
   message,
   retryUploadId,
   isFirst,
@@ -28,7 +29,7 @@ export const UserMessage = memo(function UserMessage({
   versions,
   onSelectVersion,
 }: {
-  sessionId: string
+  session: Session
   message: UserMessageType
   /** 回答因补传附件失败可重试时为该回答 id */
   retryUploadId: string | null
@@ -41,6 +42,7 @@ export const UserMessage = memo(function UserMessage({
   const t = useTranslate()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(message.content)
+  const [noteOpen, setNoteOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isMobile = useIsMobile()
   const canSend = !busy && (draft.trim() !== '' || message.files.length > 0)
@@ -54,7 +56,7 @@ export const UserMessage = memo(function UserMessage({
   }, [editing, draft])
 
   const sendEdit = () => {
-    if (canSend && ensureApiKey() && editMessage(sessionId, message.id, draft.trim())) {
+    if (canSend && ensureApiKey() && editMessage(session.id, message.id, draft.trim())) {
       stopReadAloud()
       setEditing(false)
     }
@@ -73,7 +75,7 @@ export const UserMessage = memo(function UserMessage({
             <MessageFile
               key={file.id}
               file={file}
-              onRetry={retryUploadId ? () => retryUpload(sessionId, retryUploadId) : null}
+              onRetry={retryUploadId ? () => retryUpload(session.id, retryUploadId) : null}
             />
           ))}
         </div>
@@ -116,6 +118,14 @@ export const UserMessage = memo(function UserMessage({
           <div className={styles.bottom}>
             <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
               {message.content ? <CopyButton text={message.content} /> : null}
+              {message.content ? (
+                <IconButton
+                  icon={<IconDataOutline16 />}
+                  tooltip={t('workspaceAddNote')}
+                  tooltipPlacement="bottom"
+                  onClick={() => setNoteOpen(true)}
+                />
+              ) : null}
               <IconButton
                 icon={<IconEditOutline16 />}
                 tooltip={t('editMessage')}
@@ -131,6 +141,9 @@ export const UserMessage = memo(function UserMessage({
           </div>
         </>
       )}
+      {noteOpen ? (
+        <NoteDialog session={session} message={message} onClose={() => setNoteOpen(false)} />
+      ) : null}
     </div>
   )
 })

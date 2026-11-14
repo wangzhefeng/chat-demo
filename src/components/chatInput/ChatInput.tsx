@@ -10,6 +10,7 @@ import {
 } from '../base/icons.js'
 import { setSearch, setThinking, useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
+import { useWorkspaceStore } from '../../services/workspaces/store.js'
 import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
 import {
   addDraftFiles,
@@ -55,6 +56,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  const workspacesReady = useWorkspaceStore((state) => state.ready && !state.contextPending)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [researchOpen, setResearchOpen] = useState(false)
@@ -133,10 +135,13 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const recording = voice.status === 'recording'
 
   // 排队、上传中或上传失败的附件都留在输入框，全部上传成功后才能发送
-  const canSend = !importingHistory && !streaming && voice.status === 'idle' && draftReady
+  const canSend =
+    !importingHistory && !streaming && voice.status === 'idle' && draftReady && workspacesReady
 
   const send = () => {
     if (
+      !useWorkspaceStore.getState().ready ||
+      useWorkspaceStore.getState().contextPending ||
       useChatStore.getState().importingHistory ||
       voice.status !== 'idle' ||
       !prepareDraftMessage(getDraft(sessionId), useUploads.getState().tasks)

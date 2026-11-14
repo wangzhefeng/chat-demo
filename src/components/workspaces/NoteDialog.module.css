@@ -1,0 +1,31 @@
+.dialog {
+  width: 480px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form input,
+.form select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-base);
+  font: inherit;
+}
+
+.error {
+  color: var(--dsw-alias-state-error-primary);
+}

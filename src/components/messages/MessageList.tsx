@@ -152,7 +152,7 @@ export const MessageList = ({
               message.role === 'user' ? (
                 <UserMessage
                   key={message.id}
-                  sessionId={session.id}
+                  session={session}
                   message={message}
                   retryUploadId={uploadRetryId}
                   isFirst={index === 0}

@@ -108,6 +108,29 @@
   margin-left: auto;
 }
 
+.requestContext {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-interactive-bg-hover);
+  font-size: 12px;
+}
+
+.requestContext summary {
+  cursor: pointer;
+}
+
+.requestContextDescription {
+  margin-top: 6px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.requestContext ul {
+  margin-bottom: 0;
+  padding-left: 18px;
+}
+
 .research {
   display: flex;
   align-items: center;

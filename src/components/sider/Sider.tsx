@@ -2,12 +2,14 @@ import clsx from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import {
+  IconDataOutline16,
   IconEditOutline16,
   IconPanelLeftOutline16,
   IconSettingsOutline16,
   NewChatIcon,
 } from '../base/icons.js'
-import { openReports } from '../../services/reports/store.js'
+import { closeReportPanel, openReports } from '../../services/reports/store.js'
+import { closeWorkspaces, openWorkspaces } from '../../services/workspaces/store.js'
 import { setSiderCollapsed } from '../../services/settings.js'
 import { groupSessions } from '../../services/chat/sessionGroups.js'
 import { newChat, removeSession, useChatStore } from '../../services/chat/store.js'
@@ -106,7 +108,24 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
           onClick={() => {
             closeSearchPanel()
             closeResearchPanel()
+            closeReportPanel()
+            openWorkspaces()
+            closeMobileSider()
+          }}
+        >
+          <span className={styles.settingsIcon}>
+            <IconDataOutline16 />
+          </span>
+          <span className={styles.settingsLabel}>{t('workspaces')}</span>
+        </button>
+        <button
+          type="button"
+          className={styles.settings}
+          onClick={() => {
+            closeSearchPanel()
+            closeResearchPanel()
             openReports()
+            closeWorkspaces()
             closeMobileSider()
           }}
         >

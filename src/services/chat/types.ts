@@ -1,4 +1,5 @@
 import type { TranslationMessage } from '../../i18n/index.js'
+import type { RequestContextSnapshot } from '../workspaces/types.js'
 import type { ApiErrorKind } from '../api/client.js'
 import type {
   ChatModel,
@@ -90,6 +91,8 @@ export type AssistantMessage = MessageBranch & {
   blocks: ReplyBlock[]
   stopReason?: StopReason
   stopDetails?: StopDetails
+  /** 本轮实际使用的工作区上下文快照；缺省表示没有显式选择 */
+  requestContext?: RequestContextSnapshot
   /** 最近一次请求的用量，续写后更新 */
   usage?: MessageUsage
   error?: {
